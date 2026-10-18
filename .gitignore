@@ -1,0 +1,5 @@
+.env
+data.json
+dashboard.html
+thumbs/
+__pycache__/

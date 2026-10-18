@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instagram Insights</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --ring: rgba(11, 11, 11, 0.10);
+    --s1: #2a78d6;
+    --s2: #eb6834;
+    --s3: #1baf7a;
+    --s4: #eda100;
+    --wash: rgba(11, 11, 11, 0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #f0efec;
+      --ink-2: #c3c2b7;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --ring: rgba(255, 255, 255, 0.10);
+      --s1: #3987e5;
+      --s2: #d95926;
+      --s3: #199e70;
+      --s4: #c98500;
+      --wash: rgba(255, 255, 255, 0.06);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --ring: rgba(255, 255, 255, 0.10);
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --s4: #c98500;
+    --wash: rgba(255, 255, 255, 0.06);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 16px 64px; }
+  header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 24px; font-weight: 650; letter-spacing: -0.01em; }
+  .sub { margin: 4px 0 0; color: var(--ink-2); }
+  button, select { font: inherit; color: inherit; }
+  .btn {
+    background: var(--surface); border: 1px solid var(--ring); border-radius: 8px;
+    padding: 6px 12px; cursor: pointer;
+  }
+  .btn:hover { background: var(--wash); }
+  .btn:focus-visible, .seg button:focus-visible, th button:focus-visible, svg:focus-visible, .row:focus-visible {
+    outline: 2px solid var(--s1); outline-offset: 2px;
+  }
+
+  .filters { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; margin: 24px 0 8px; }
+  .filters .group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .filters .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 2px; }
+  .seg button { background: none; border: 0; padding: 5px 11px; border-radius: 6px; cursor: pointer; color: var(--ink-2); }
+  .seg button:hover { background: var(--wash); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+
+  h2.section { margin: 28px 0 10px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  .tile { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 14px 16px; }
+  .tile .k { color: var(--ink-2); font-size: 13px; }
+  .tile .v { font-size: 30px; font-weight: 650; letter-spacing: -0.02em; margin-top: 2px; }
+  .tile .n { color: var(--muted); font-size: 12px; margin-top: 2px; min-height: 17px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--ring); border-radius: 12px; padding: 16px; margin-top: 12px; }
+  .grid2 .card { margin-top: 0; }
+  .card h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  .card .note { margin: 2px 0 10px; color: var(--ink-2); font-size: 12.5px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin: 0 0 8px; color: var(--ink-2); font-size: 12.5px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+  svg { display: block; width: 100%; overflow: visible; }
+  svg text { font-family: inherit; }
+  .empty { color: var(--ink-2); padding: 24px 0; }
+
+  .row .hit { fill: transparent; }
+  .row:hover .hit, .row:focus .hit { fill: var(--wash); }
+  .row:focus { outline: none; }
+
+  #tip {
+    position: fixed; z-index: 10; pointer-events: none; display: none;
+    background: var(--surface); border: 1px solid var(--ring); border-radius: 8px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); padding: 8px 10px; min-width: 130px; max-width: 280px;
+  }
+  #tip .t { color: var(--ink-2); font-size: 12px; margin-bottom: 4px; }
+  #tip .r { display: flex; align-items: center; gap: 8px; justify-content: space-between; font-size: 13px; }
+  #tip .r .l { display: flex; align-items: center; gap: 6px; color: var(--ink-2); }
+  #tip .r .l b { display: inline-block; width: 12px; height: 2px; border-radius: 1px; }
+  #tip .r .val { font-weight: 650; color: var(--ink); }
+
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 760px; }
+  th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2), th:nth-child(3), td:nth-child(3) { text-align: left; }
+  th { font-weight: 600; font-size: 12px; color: var(--ink-2); }
+  th button { background: none; border: 0; padding: 0; cursor: pointer; font-weight: 600; font-size: 12px; color: inherit; }
+  th button:hover { color: var(--ink); }
+  td.post { white-space: normal; min-width: 240px; }
+  .pcell { display: flex; align-items: center; gap: 10px; }
+  .pcell img, .ph { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; background: var(--wash); flex: none; }
+  .pcell a { color: var(--ink); text-decoration: none; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+  .pcell a:hover { text-decoration: underline; }
+  .dash { color: var(--muted); }
+  .foot { margin-top: 24px; color: var(--muted); font-size: 12.5px; max-width: 760px; }
+  @media (forced-colors: active) { .seg button[aria-pressed="true"] { outline: 2px solid; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="title">Instagram insights</h1>
+      <p class="sub" id="subtitle"></p>
+    </div>
+    <button class="btn" id="theme" type="button" aria-label="Switch between light and dark">Theme</button>
+  </header>
+
+  <div class="filters">
+    <div class="group"><span class="label">Format</span>
+      <div class="seg" id="fmtSeg" role="group" aria-label="Format filter"></div></div>
+    <div class="group"><span class="label">Rank posts by</span>
+      <div class="seg" id="metSeg" role="group" aria-label="Ranking metric"></div></div>
+  </div>
+
+  <h2 class="section">Account, last 30 days</h2>
+  <div class="tiles" id="accountTiles"></div>
+
+  <div class="card">
+    <h3>Daily reach</h3>
+    <p class="note" id="reachNote"></p>
+    <svg id="reachChart" role="img" tabindex="0" aria-label="Daily account reach for the last 30 days"></svg>
+  </div>
+
+  <h2 class="section">Posts</h2>
+  <div class="tiles" id="postTiles"></div>
+
+  <div class="card">
+    <h3 id="rankTitle">Posts ranked</h3>
+    <p class="note" id="rankNote"></p>
+    <svg id="rankChart" role="img" aria-label="Posts ranked by the selected metric"></svg>
+  </div>
+
+  <div class="card">
+    <h3>Engagement mix per post</h3>
+    <p class="note" id="mixNote"></p>
+    <div class="legend" id="mixLegend"></div>
+    <svg id="mixChart" role="img" aria-label="Likes, comments, shares and saves per post"></svg>
+  </div>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="card"><h3>Average reach by format</h3><p class="note" id="fmtReachNote"></p>
+      <svg id="fmtReach" role="img" aria-label="Average reach per post by format"></svg></div>
+    <div class="card"><h3>Engagement rate by format</h3><p class="note" id="fmtErNote"></p>
+      <svg id="fmtEr" role="img" aria-label="Engagement rate by format"></svg></div>
+  </div>
+
+  <div class="card">
+    <h3>All posts</h3>
+    <p class="note">Click a column heading to sort. A dash means Instagram has no figure for that post.</p>
+    <div class="tablewrap"><table id="tbl"></table></div>
+  </div>
+
+  <p class="foot" id="foot"></p>
+</div>
+<div id="tip" role="status"></div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(function () {
+  "use strict";
+  var RAW = JSON.parse(document.getElementById("data").textContent);
+  var NS = "http://www.w3.org/2000/svg";
+  var nf = new Intl.NumberFormat("en-IN");
+  var pf = new Intl.NumberFormat("en-IN", { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  var dtf = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
+  var dtShort = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
+
+  function el(tag, attrs, text) {
+    var n = document.createElementNS(NS, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function h(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function clear(n) { while (n.firstChild) n.removeChild(n.firstChild); }
+  function compact(v) {
+    if (v >= 1e5) return (v / 1e5).toFixed(v % 1e5 ? 1 : 0).replace(/\.0$/, "") + "L";
+    if (v >= 1e3) return (v / 1e3).toFixed(v % 1e3 ? 1 : 0).replace(/\.0$/, "") + "k";
+    return String(v);
+  }
+  // Smallest round step that keeps the axis to five intervals or fewer.
+  function niceScale(v) {
+    if (!(v > 0)) return { max: 1, step: 0.25, n: 4 };
+    var mag = Math.pow(10, Math.floor(Math.log10(v)) - 1);
+    var mults = [1, 2, 2.5, 5, 10, 20, 25, 50, 100];
+    for (var i = 0; i < mults.length; i++) {
+      var step = mults[i] * mag, n = Math.ceil(v / step - 1e-9);
+      if (n <= 5) return { max: step * n, step: step, n: n };
+    }
+    return { max: v, step: v, n: 1 };
+  }
+  function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  var TYPE = { REELS: "Reel", CAROUSEL_ALBUM: "Carousel", IMAGE: "Image", VIDEO: "Video" };
+  var posts = RAW.posts.map(function (p) {
+    var i = p.insights || {};
+    var type = p.media_product_type === "REELS" ? "Reel" : (TYPE[p.media_type] || p.media_type);
+    var likes = i.likes != null ? i.likes : p.like_count;
+    var comments = i.comments != null ? i.comments : p.comments_count;
+    var has = i.reach != null;
+    var inter = i.total_interactions != null ? i.total_interactions : (likes || 0) + (comments || 0);
+    return {
+      id: p.id, date: new Date(p.timestamp), type: type,
+      caption: (p.caption || "").replace(/\s+/g, " ").trim(), link: p.permalink, thumb: p.thumb,
+      has: has, reach: has ? i.reach : null, views: i.views != null ? i.views : null,
+      likes: likes, comments: comments, shares: i.shares != null ? i.shares : null,
+      saves: i.saved != null ? i.saved : null, inter: inter,
+      er: has && i.reach > 0 ? inter / i.reach : null
+    };
+  }).sort(function (a, b) { return b.date - a.date; });
+
+  var state = { fmt: "All", met: "reach", sort: { key: "date", dir: -1 } };
+
+  var METRICS = [
+    { key: "reach", label: "Reach", fmt: nf.format.bind(nf), insight: true },
+    { key: "views", label: "Views", fmt: nf.format.bind(nf), insight: true },
+    { key: "inter", label: "Interactions", fmt: nf.format.bind(nf), insight: false },
+    { key: "er", label: "Engagement rate", fmt: pf.format.bind(pf), insight: true },
+    { key: "saves", label: "Saves", fmt: nf.format.bind(nf), insight: true }
+  ];
+  function metric(key) { return METRICS.filter(function (m) { return m.key === key; })[0]; }
+
+  /* ---------- tooltip ---------- */
+  var tip = document.getElementById("tip");
+  function showTip(x, y, title, rows) {
+    clear(tip);
+    if (title) tip.appendChild(h("div", "t", title));
+    rows.forEach(function (r) {
+      var row = h("div", "r");
+      var l = h("span", "l");
+      if (r.color) { var key = h("b"); key.style.background = r.color; l.appendChild(key); }
+      l.appendChild(document.createTextNode(r.label));
+      row.appendChild(l);
+      row.appendChild(h("span", "val", r.value));
+      tip.appendChild(row);
+    });
+    tip.style.display = "block";
+    var w = tip.offsetWidth, hh = tip.offsetHeight;
+    var left = x + 14, top = y - hh - 10;
+    if (left + w > window.innerWidth - 8) left = x - w - 14;
+    if (left < 8) left = 8;
+    if (top < 8) top = y + 16;
+    tip.style.left = left + "px";
+    tip.style.top = top + "px";
+  }
+  function hideTip() { tip.style.display = "none"; }
+  function tipAtEl(node, title, rows) {
+    var b = node.getBoundingClientRect();
+    showTip(b.left + Math.min(b.width, 260) / 2, b.top + b.height / 2, title, rows);
+  }
+
+  /* ---------- filters ---------- */
+  function visible() { return posts.filter(function (p) { return state.fmt === "All" || p.type === state.fmt; }); }
+  function buildSeg(host, items, current, onPick) {
+    clear(host);
+    items.forEach(function (it) {
+      var b = h("button", null, it.label);
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(it.key === current));
+      b.addEventListener("click", function () { onPick(it.key); });
+      host.appendChild(b);
+    });
+  }
+  function buildFilters() {
+    var types = ["All"].concat(Array.from(new Set(posts.map(function (p) { return p.type; }))));
+    buildSeg(document.getElementById("fmtSeg"), types.map(function (t) {
+      var n = t === "All" ? posts.length : posts.filter(function (p) { return p.type === t; }).length;
+      return { key: t, label: (t === "All" ? "All" : t + "s") + " (" + n + ")" };
+    }), state.fmt, function (k) { state.fmt = k; renderAll(); });
+    buildSeg(document.getElementById("metSeg"), METRICS.map(function (m) { return { key: m.key, label: m.label }; }),
+      state.met, function (k) { state.met = k; renderAll(); });
+  }
+
+  /* ---------- tiles ---------- */
+  function tile(host, k, v, n) {
+    var t = h("div", "tile");
+    t.appendChild(h("div", "k", k));
+    t.appendChild(h("div", "v", v));
+    t.appendChild(h("div", "n", n || ""));
+    host.appendChild(t);
+  }
+  function renderTiles() {
+    var a = document.getElementById("accountTiles"); clear(a);
+    var t = RAW.account.totals_30d || {};
+    tile(a, "Followers", nf.format(RAW.profile.followers_count), nf.format(RAW.profile.follows_count) + " following");
+    tile(a, "Views", t.views != null ? nf.format(t.views) : "-", "Plays and impressions, all content");
+    tile(a, "Accounts engaged", t.accounts_engaged != null ? nf.format(t.accounts_engaged) : "-", "Unique accounts that interacted");
+    tile(a, "Profile views", t.profile_views != null ? nf.format(t.profile_views) : "-", "");
+
+    var p = document.getElementById("postTiles"); clear(p);
+    var vis = visible(), withI = vis.filter(function (x) { return x.has; });
+    var reach = withI.reduce(function (s, x) { return s + x.reach; }, 0);
+    var inter = withI.reduce(function (s, x) { return s + x.inter; }, 0);
+    tile(p, "Posts shown", String(vis.length), withI.length + " with reach data");
+    tile(p, "Total reach", withI.length ? nf.format(reach) : "-", "Summed across posts, accounts can repeat");
+    tile(p, "Engagement rate", reach ? pf.format(inter / reach) : "-", "Interactions divided by reach");
+    var best = withI.slice().sort(function (x, y) { return y.reach - x.reach; })[0];
+    tile(p, "Top post by reach", best ? nf.format(best.reach) : "-", best ? dtf.format(best.date) + " (" + best.type + ")" : "");
+  }
+
+  /* ---------- line chart ---------- */
+  function renderReach() {
+    var svg = document.getElementById("reachChart"); clear(svg);
+    var data = (RAW.account.daily_reach || []).map(function (d) { return { t: new Date(d.date + "T00:00:00Z"), v: d.value }; });
+    if (!data.length) { svg.setAttribute("viewBox", "0 0 10 10"); return; }
+    var W = svg.getBoundingClientRect().width || 800, H = 250;
+    var m = { l: 44, r: 16, t: 16, b: 28 };
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.style.height = H + "px";
+    var sc = niceScale(Math.max.apply(null, data.map(function (d) { return d.v; })));
+    var max = sc.max;
+    var x = function (i) { return m.l + (W - m.l - m.r) * (data.length === 1 ? 0.5 : i / (data.length - 1)); };
+    var y = function (v) { return H - m.b - (H - m.t - m.b) * v / max; };
+    var grid = cssVar("--grid"), axis = cssVar("--axis"), muted = cssVar("--muted"), s1 = cssVar("--s1"), surf = cssVar("--surface");
+
+    for (var g = 0; g <= sc.n; g++) {
+      var gv = sc.step * g, gy = y(gv);
+      svg.appendChild(el("line", { x1: m.l, x2: W - m.r, y1: gy, y2: gy, stroke: g === 0 ? axis : grid, "stroke-width": 1 }));
+      svg.appendChild(el("text", { x: m.l - 8, y: gy + 4, "text-anchor": "end", "font-size": 11, fill: muted }, compact(Math.round(gv))));
+    }
+    var step = Math.max(1, Math.round(data.length / 6));
+    data.forEach(function (d, i) {
+      if (i % step === 0 || i === data.length - 1) {
+        if (i === data.length - 1 && (data.length - 1) % step !== 0 && (data.length - 1 - (data.length - 1) % step) > data.length - 1 - step / 2) return;
+        svg.appendChild(el("text", { x: x(i), y: H - 8, "text-anchor": "middle", "font-size": 11, fill: muted }, dtShort.format(d.t)));
+      }
+    });
+    var path = data.map(function (d, i) { return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(d.v).toFixed(1); }).join(" ");
+    svg.appendChild(el("path", { d: path, fill: "none", stroke: s1, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+
+    var peakI = 0;
+    data.forEach(function (d, i) { if (d.v > data[peakI].v) peakI = i; });
+    svg.appendChild(el("circle", { cx: x(peakI), cy: y(data[peakI].v), r: 4, fill: s1, stroke: surf, "stroke-width": 2 }));
+    var px = x(peakI), anchor = px > W - 90 ? "end" : px < m.l + 60 ? "start" : "middle";
+    svg.appendChild(el("text", { x: px + (anchor === "end" ? -8 : anchor === "start" ? 8 : 0), y: y(data[peakI].v) - 10, "text-anchor": anchor, "font-size": 12, fill: cssVar("--ink") }, "Peak " + nf.format(data[peakI].v)));
+
+    var cross = el("line", { y1: m.t, y2: H - m.b, stroke: muted, "stroke-width": 1, visibility: "hidden" });
+    var dot = el("circle", { r: 5, fill: s1, stroke: surf, "stroke-width": 2, visibility: "hidden" });
+    svg.appendChild(cross); svg.appendChild(dot);
+    var cur = -1;
+    function at(i, clientX, clientY) {
+      cur = Math.max(0, Math.min(data.length - 1, i));
+      var d = data[cur];
+      cross.setAttribute("x1", x(cur)); cross.setAttribute("x2", x(cur)); cross.setAttribute("visibility", "visible");
+      dot.setAttribute("cx", x(cur)); dot.setAttribute("cy", y(d.v)); dot.setAttribute("visibility", "visible");
+      var b = svg.getBoundingClientRect();
+      showTip(clientX != null ? clientX : b.left + x(cur), clientY != null ? clientY : b.top + y(d.v),
+        dtf.format(d.t).replace(/, \d{4}$/, "") , [{ color: s1, label: "Reach", value: nf.format(d.v) }]);
+    }
+    svg.onpointermove = function (e) {
+      var b = svg.getBoundingClientRect();
+      var rel = (e.clientX - b.left) / b.width * W;
+      at(Math.round((rel - m.l) / (W - m.l - m.r) * (data.length - 1)), e.clientX, e.clientY);
+    };
+    svg.onpointerleave = function () { cross.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden"); hideTip(); };
+    svg.onfocus = function () { at(cur < 0 ? data.length - 1 : cur); };
+    svg.onblur = svg.onpointerleave;
+    svg.onkeydown = function (e) {
+      if (e.key === "ArrowLeft") { e.preventDefault(); at(cur < 0 ? data.length - 1 : cur - 1); }
+      if (e.key === "ArrowRight") { e.preventDefault(); at(cur < 0 ? data.length - 1 : cur + 1); }
+    };
+    document.getElementById("reachNote").textContent =
+      "Accounts reached per day. Instagram's reporting day ends at midnight Pacific time, and the latest day or two can still be filling in.";
+  }
+
+  /* ---------- horizontal bars ---------- */
+  function roundedRight(x, y, w, hgt, r) {
+    r = Math.min(r, w, hgt / 2);
+    return "M" + x + " " + y + "H" + (x + w - r) + "Q" + (x + w) + " " + y + " " + (x + w) + " " + (y + r) +
+      "V" + (y + hgt - r) + "Q" + (x + w) + " " + (y + hgt) + " " + (x + w - r) + " " + (y + hgt) + "H" + x + "Z";
+  }
+  // rows: [{label, sub, thumb, value, tip:[{label,value,color}], tipTitle, segs:[{v,color}], total}]
+  function hbar(svg, rows, o) {
+    clear(svg);
+    if (!rows.length) { svg.setAttribute("viewBox", "0 0 10 10"); svg.style.height = "0"; return; }
+    var W = svg.getBoundingClientRect().width || 700;
+    var rowH = o.rowH || 34, barH = o.barH || 16, labelW = o.labelW || 150;
+    var valW = 64, axisH = 22, top = 4;
+    var H = top + rows.length * rowH + axisH;
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.style.height = H + "px";
+    var sc = niceScale(Math.max.apply(null, rows.map(function (r) { return r.total != null ? r.total : r.value; })) || 1);
+    var max = sc.max;
+    var plotL = labelW, plotR = W - valW;
+    var x = function (v) { return plotL + (plotR - plotL) * v / max; };
+    var grid = cssVar("--grid"), axis = cssVar("--axis"), muted = cssVar("--muted"), ink = cssVar("--ink"), ink2 = cssVar("--ink-2"), surf = cssVar("--surface");
+    var s1 = cssVar("--s1");
+
+    for (var g = 0; g <= sc.n; g++) {
+      var gx = x(sc.step * g);
+      svg.appendChild(el("line", { x1: gx, x2: gx, y1: top, y2: top + rows.length * rowH, stroke: g === 0 ? axis : grid, "stroke-width": 1 }));
+      svg.appendChild(el("text", { x: gx, y: H - 6, "text-anchor": g === 0 ? "start" : "middle", "font-size": 11, fill: muted }, o.axisFmt(sc.step * g)));
+    }
+    rows.forEach(function (r, i) {
+      var gy = top + i * rowH, cy = gy + rowH / 2;
+      var grp = el("g", { "class": "row", tabindex: 0, role: "img", "aria-label": r.tipTitle + ": " + r.tip.map(function (t) { return t.label + " " + t.value; }).join(", ") });
+      grp.appendChild(el("rect", { "class": "hit", x: 0, y: gy, width: W, height: rowH, rx: 6 }));
+      var tx = 6;
+      if (r.thumb !== undefined && o.thumbs) {
+        if (r.thumb) {
+          var img = el("image", { href: r.thumb, x: 6, y: cy - 14, width: 28, height: 28, preserveAspectRatio: "xMidYMid slice" });
+          grp.appendChild(el("rect", { x: 6, y: cy - 14, width: 28, height: 28, rx: 5, fill: cssVar("--wash") }));
+          grp.appendChild(img);
+        }
+        tx = 42;
+      }
+      grp.appendChild(el("text", { x: tx, y: r.sub ? cy - 2 : cy + 4, "font-size": 12.5, fill: ink }, r.label));
+      if (r.sub) grp.appendChild(el("text", { x: tx, y: cy + 12, "font-size": 11, fill: ink2 }, r.sub));
+      if (r.segs) {
+        var acc = 0, last = -1;
+        r.segs.forEach(function (s, k) { if (s.v > 0) last = k; });
+        r.segs.forEach(function (s, k) {
+          if (!(s.v > 0)) return;
+          var x0 = x(acc), w = x(acc + s.v) - x0;
+          if (k === last) grp.appendChild(el("path", { d: roundedRight(x0, cy - barH / 2, Math.max(w, 2), barH, 4), fill: s.color, stroke: surf, "stroke-width": 2 }));
+          else grp.appendChild(el("rect", { x: x0, y: cy - barH / 2, width: Math.max(w, 2), height: barH, fill: s.color, stroke: surf, "stroke-width": 2 }));
+          acc += s.v;
+        });
+        grp.appendChild(el("text", { x: x(r.total) + 8, y: cy + 4, "font-size": 12, fill: ink }, o.valFmt(r.total)));
+      } else {
+        var w2 = Math.max(x(r.value) - plotL, r.value > 0 ? 2 : 0);
+        if (w2 > 0) grp.appendChild(el("path", { d: roundedRight(plotL, cy - barH / 2, w2, barH, 4), fill: s1 }));
+        grp.appendChild(el("text", { x: plotL + w2 + 8, y: cy + 4, "font-size": 12, fill: ink }, o.valFmt(r.value)));
+      }
+      grp.addEventListener("pointermove", function (e) { showTip(e.clientX, e.clientY, r.tipTitle, r.tip); });
+      grp.addEventListener("pointerleave", hideTip);
+      grp.addEventListener("focus", function () { tipAtEl(grp, r.tipTitle, r.tip); });
+      grp.addEventListener("blur", hideTip);
+      svg.appendChild(grp);
+    });
+  }
+
+  function postLabel(p) { return { label: dtf.format(p.date), sub: p.type, thumb: p.thumb || null }; }
+
+  function renderRank() {
+    var m = metric(state.met);
+    var vis = visible();
+    var pool = vis.filter(function (p) { return p[m.key] != null; });
+    var missing = vis.length - pool.length;
+    pool.sort(function (a, b) { return b[m.key] - a[m.key]; });
+    document.getElementById("rankTitle").textContent = "Posts ranked by " + m.label.toLowerCase();
+    document.getElementById("rankNote").textContent = missing
+      ? missing + " older post" + (missing > 1 ? "s" : "") + " left out: Instagram has no " + m.label.toLowerCase() + " figure for posts made before the account became professional."
+      : "Every post in the current filter is shown.";
+    var rows = pool.map(function (p) {
+      var l = postLabel(p);
+      return { label: l.label, sub: l.sub, thumb: l.thumb, value: p[m.key],
+        tipTitle: dtf.format(p.date) + " (" + p.type + ")",
+        tip: [{ color: cssVar("--s1"), label: m.label, value: m.fmt(p[m.key]) },
+              { label: "Likes", value: nf.format(p.likes || 0) },
+              { label: "Comments", value: nf.format(p.comments || 0) }] };
+    });
+    var svg = document.getElementById("rankChart");
+    if (!rows.length) { clear(svg); svg.style.height = "0"; document.getElementById("rankNote").textContent = "No posts in this filter have a " + m.label.toLowerCase() + " figure."; return; }
+    hbar(svg, rows, { thumbs: true, labelW: 150, axisFmt: function (v) { return state.met === "er" ? pf.format(v) : compact(Math.round(v)); }, valFmt: m.fmt });
+  }
+
+  var SER = [
+    { key: "likes", label: "Likes", c: "--s1" },
+    { key: "comments", label: "Comments", c: "--s2" },
+    { key: "shares", label: "Shares", c: "--s3" },
+    { key: "saves", label: "Saves", c: "--s4" }
+  ];
+  function renderMix() {
+    var vis = visible().filter(function (p) { return p.has; });
+    var leg = document.getElementById("mixLegend"); clear(leg);
+    SER.forEach(function (s) {
+      var item = h("span"); var i = h("i"); i.style.background = cssVar(s.c);
+      item.appendChild(i); item.appendChild(document.createTextNode(s.label)); leg.appendChild(item);
+    });
+    var svg = document.getElementById("mixChart");
+    document.getElementById("mixNote").textContent = "Only posts with full insights, " + vis.length + " in this filter. Total at the end of each bar. Exact figures are in the table below.";
+    var sorted = vis.slice().sort(function (a, b) { return b.inter - a.inter; });
+    var rows = sorted.map(function (p) {
+      var l = postLabel(p);
+      var vals = SER.map(function (s) { return p[s.key] || 0; });
+      var tot = vals.reduce(function (a, b) { return a + b; }, 0);
+      return { label: l.label, sub: l.sub, thumb: l.thumb, total: tot,
+        segs: SER.map(function (s, k) { return { v: vals[k], color: cssVar(s.c) }; }),
+        tipTitle: dtf.format(p.date) + " (" + p.type + ")",
+        tip: SER.map(function (s, k) { return { color: cssVar(s.c), label: s.label, value: nf.format(vals[k]) }; }).concat([{ label: "Total", value: nf.format(tot) }]) };
+    });
+    if (!rows.length) { clear(svg); svg.style.height = "0"; return; }
+    hbar(svg, rows, { thumbs: true, labelW: 150, axisFmt: function (v) { return compact(Math.round(v)); }, valFmt: nf.format.bind(nf) });
+  }
+
+  function renderFormats() {
+    var all = posts.filter(function (p) { return p.has; });
+    var types = Array.from(new Set(all.map(function (p) { return p.type; })));
+    var mk = function (key, fmt) {
+      return types.map(function (t) {
+        var g = all.filter(function (p) { return p.type === t; });
+        var val = key === "er"
+          ? g.reduce(function (s, p) { return s + p.inter; }, 0) / g.reduce(function (s, p) { return s + p.reach; }, 0)
+          : g.reduce(function (s, p) { return s + p.reach; }, 0) / g.length;
+        return { label: t + "s", sub: "n = " + g.length, value: val, tipTitle: t + "s (" + g.length + " posts)",
+          tip: [{ color: cssVar("--s1"), label: key === "er" ? "Engagement rate" : "Average reach", value: fmt(val) }] };
+      }).sort(function (a, b) { return b.value - a.value; });
+    };
+    document.getElementById("fmtReachNote").textContent = "Posts with insights only. Format filter does not apply here.";
+    document.getElementById("fmtErNote").textContent = "Interactions divided by reach, summed per format.";
+    hbar(document.getElementById("fmtReach"), mk("reach", nf.format.bind(nf)), { labelW: 110, rowH: 40, axisFmt: function (v) { return compact(Math.round(v)); }, valFmt: function (v) { return nf.format(Math.round(v)); } });
+    hbar(document.getElementById("fmtEr"), mk("er", pf.format.bind(pf)), { labelW: 110, rowH: 40, axisFmt: function (v) { return pf.format(v); }, valFmt: pf.format.bind(pf) });
+  }
+
+  /* ---------- table ---------- */
+  var COLS = [
+    { key: "caption", label: "Post", cls: "post" }, { key: "date", label: "Date" }, { key: "type", label: "Format" },
+    { key: "reach", label: "Reach" }, { key: "views", label: "Views" }, { key: "likes", label: "Likes" },
+    { key: "comments", label: "Comments" }, { key: "shares", label: "Shares" }, { key: "saves", label: "Saves" },
+    { key: "er", label: "Eng. rate" }
+  ];
+  function renderTable() {
+    var t = document.getElementById("tbl"); clear(t);
+    var head = h("thead"), hr = h("tr");
+    COLS.forEach(function (c) {
+      var th = h("th"); var b = h("button", null, c.label + (state.sort.key === c.key ? (state.sort.dir > 0 ? " ▲" : " ▼") : ""));
+      b.type = "button";
+      b.addEventListener("click", function () {
+        state.sort = { key: c.key, dir: state.sort.key === c.key ? -state.sort.dir : (c.key === "caption" || c.key === "type" ? 1 : -1) };
+        renderTable();
+      });
+      th.setAttribute("aria-sort", state.sort.key === c.key ? (state.sort.dir > 0 ? "ascending" : "descending") : "none");
+      th.appendChild(b); hr.appendChild(th);
+    });
+    head.appendChild(hr); t.appendChild(head);
+    var k = state.sort.key, d = state.sort.dir;
+    var rows = visible().slice().sort(function (a, b) {
+      var x = a[k], y = b[k];
+      if (x == null && y == null) return 0;
+      if (x == null) return 1;
+      if (y == null) return -1;
+      if (k === "date") return (x - y) * d;
+      if (typeof x === "string") return x.localeCompare(y) * d;
+      return (x - y) * d;
+    });
+    var body = h("tbody");
+    rows.forEach(function (p) {
+      var tr = h("tr");
+      var td = h("td", "post"), cell = h("div", "pcell");
+      if (p.thumb) { var im = h("img"); im.src = p.thumb; im.alt = ""; im.loading = "lazy"; cell.appendChild(im); } else cell.appendChild(h("div", "ph"));
+      var a = h("a", null, p.caption || "(no caption)"); a.href = p.link; a.target = "_blank"; a.rel = "noopener noreferrer";
+      cell.appendChild(a); td.appendChild(cell); tr.appendChild(td);
+      tr.appendChild(h("td", null, dtf.format(p.date)));
+      tr.appendChild(h("td", null, p.type));
+      ["reach", "views", "likes", "comments", "shares", "saves"].forEach(function (key) {
+        var v = p[key], c = h("td");
+        if (v == null) { c.className = "dash"; c.textContent = "-"; } else c.textContent = nf.format(v);
+        tr.appendChild(c);
+      });
+      var e = h("td"); if (p.er == null) { e.className = "dash"; e.textContent = "-"; } else e.textContent = pf.format(p.er);
+      tr.appendChild(e);
+      body.appendChild(tr);
+    });
+    t.appendChild(body);
+  }
+
+  function renderAll() {
+    buildFilters(); renderTiles(); renderReach(); renderRank(); renderMix(); renderFormats(); renderTable();
+  }
+
+  /* ---------- page shell ---------- */
+  document.getElementById("title").textContent = "@" + RAW.profile.username;
+  document.getElementById("subtitle").textContent =
+    RAW.profile.name + " · " + RAW.profile.account_type.replace("MEDIA_", "").toLowerCase() + " account · data pulled " +
+    new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }).format(new Date(RAW.fetched_at)) + " IST";
+  var older = posts.filter(function (p) { return !p.has; }).length;
+  document.getElementById("foot").textContent =
+    "Reach counts unique accounts, views count every play or impression, and engagement rate is likes, comments, shares and saves divided by reach. " +
+    (older ? older + " older posts have likes and comments only, because Instagram does not report reach for content posted before the account became professional. " : "") +
+    "Numbers come from the Instagram API and can lag by a day or two.";
+
+  var root = document.documentElement;
+  try { var saved = localStorage.getItem("ig-theme"); if (saved) root.setAttribute("data-theme", saved); } catch (e) {}
+  document.getElementById("theme").addEventListener("click", function () {
+    var dark = root.getAttribute("data-theme") ? root.getAttribute("data-theme") === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var next = dark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("ig-theme", next); } catch (e) {}
+    renderAll();
+  });
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+  var pending = 0;
+  new ResizeObserver(function () { cancelAnimationFrame(pending); pending = requestAnimationFrame(function () { renderReach(); renderRank(); renderMix(); renderFormats(); }); })
+    .observe(document.querySelector(".wrap"));
+  renderAll();
+})();
+</script>
+</body>
+</html>
